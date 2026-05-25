@@ -1,0 +1,16 @@
+{
+    "liu_camera_roll_folder": "/share/CACHEDEV1_DATA/family_photos/Liu camera roll/",
+    "robby_camera_roll_folder": "/share/CACHEDEV1_DATA/family_photos/Robby camera roll/",
+    "destination_photos_folder": "/share/CACHEDEV1_DATA/family_photos/",
+    "logs_file": "/share/CACHEDEV1_DATA/family_photos/.scripts/camera_roll_sorter/logs.log",
+    "supported_file_types": [
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".mp4",
+        ".gif",
+        ".heic"
+    ],
+    "mode": "copy",
+    "dry_run": false
+}

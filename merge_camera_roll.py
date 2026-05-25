@@ -1,3 +1,5 @@
+#!/share/CACHEDEV1_DATA/.qpkg/Python3/opt/python3/bin/python3
+
 from pathlib import Path
 import stat
 import sys
@@ -102,3 +104,8 @@ class CameraRollAdder:
                 print(
                     f"\033[93mWarning: Skipped {file} as it is not a photo or video file\033[0m"
                 )
+
+
+if __name__ == "__main__":
+    adder = CameraRollAdder()
+    adder.add_photos_to_master_set()

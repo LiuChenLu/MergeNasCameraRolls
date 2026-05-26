@@ -1,4 +1,4 @@
-#!/share/CACHEDEV1_DATA/.qpkg/Python3/opt/python3/bin/python3
+#!/share/CACHEDEV1_DATA/.qpkg/Python3/opt/python3/bin/python3.12
 
 from pathlib import Path
 import stat
@@ -11,13 +11,13 @@ from typing import Optional
 
 
 class CameraRollAdder:
-    def __init__(self):
-        script_dir = Path(__file__).parent
-        self.source_folder = script_dir / "Files" / "camera_roll_test" / "src"
-        self.target_folder = script_dir / "Files" / "camera_roll_test" / "dest"
+    def __init__(self, config, logger):
+        self.config = config
+        self.logger = logger
 
-    # TODO known issue, sometimes the created time of photo is wrong. Should use System.Photo.DateTaken but i am on linux and can't be bothered.
-    def get_created_time(self, photo) -> Optional[datetime]:
+    # TODO Sometimes the created time of photo is wrong and is instead stored on System.Photo.DateTaken.
+    # However, this that is only accessible via Windows API and is not easily accessible on Linux.
+    def _get_created_time(self, photo) -> Optional[datetime]:
         """Get the created time of the photo"""
 
         # For mp4 video files, use ffprobe to get the creation time from metadata
@@ -55,18 +55,18 @@ class CameraRollAdder:
                 timestamp = stat.st_mtime
             return datetime.fromtimestamp(timestamp)
 
-    def get_target_subfolder_name(self, photo) -> str:
+    def _get_target_subfolder_name(self, photo) -> str:
         """Get the target subfolder name based on the created time of the photo"""
-        created_time = self.get_created_time(photo)
+        created_time = self._get_created_time(photo)
         if created_time is None:
-            print(
-                f"\033[93mWarning: Could not determine created time for {photo}, using 'unknown_date' as subfolder name\033[0m"
+            self.logger.warning(
+                f"Could not determine created time for {photo}, using 'unknown_date' as subfolder name"
             )
             return "unknown"
         else:
             return created_time.strftime("%Y-%m")
 
-    def is_photo_file(self, file):
+    def _is_supported_file(self, file):
         # Check if the file is a Google photo or video file based on its extension
         return file.suffix.lower() in [
             ".jpg",
@@ -78,34 +78,58 @@ class CameraRollAdder:
             ".heic",
         ]
 
-    def add_photos_to_master_set(self):
-        for file in [p for p in self.source_folder.rglob("*") if p.is_file()]:
-            if self.is_photo_file(file):
-                target_subfolder = self.target_folder / self.get_target_subfolder_name(
-                    file
-                )
-                print(f"Target subfolder: {target_subfolder}")
+    def _get_camera_roll_files(self):
+        """Lazily yield all files from camera roll folders."""
+        liu_camera_roll_folder = self.config.get("liu_camera_roll_folder")
+        robby_camera_roll_folder = self.config.get("robby_camera_roll_folder")
 
+        if self._folder_exists(liu_camera_roll_folder):
+            for p in Path(liu_camera_roll_folder).rglob("*"):
+                if p.is_file():
+                    yield p
+        if self._folder_exists(robby_camera_roll_folder):
+            for p in Path(robby_camera_roll_folder).rglob("*"):
+                if p.is_file():
+                    yield p
+
+    def _folder_exists(self, folder: str) -> bool:
+        return (
+            folder is not None
+            and folder != ""
+            and Path(folder).exists()
+            and Path(folder).is_dir()
+        )
+
+    def add_photos_to_master_set(self):
+        destination_photos_folder = self.config.get("destination_photos_folder")
+        if not self._folder_exists(destination_photos_folder):
+            self.logger.error(
+                f"Did not merge camera roll. Destination photos folder does not exist: {destination_photos_folder}"
+            )
+            return
+        destination_photos_folder = Path(destination_photos_folder)
+
+        for file in self._get_camera_roll_files():
+            if self._is_supported_file(file):
+                target_subfolder = (
+                    destination_photos_folder / self._get_target_subfolder_name(file)
+                )
                 try:
-                    target_subfolder.mkdir(exist_ok=True)
-                    target_photo = target_subfolder / file.name
+                    target_photo = destination_photos_folder / file.name
                     if not target_photo.exists():
                         target_photo.write_bytes(file.read_bytes())
-                        print(f"Copied {file} to {target_photo}")
+                        self.logger.debug(f"Copied {file} to {target_photo}")
                     else:
-                        print(f"Skipped {file} as it already exists in {target_photo}")
+                        self.logger.debug(
+                            f"Skipped {file} as it already exists in {target_photo}"
+                        )
                 except Exception as e:
-                    print(
-                        f"\033[91mError occurred while creating target subfolder: {e }\033[0m"
+                    self.logger.error(
+                        f"Error occurred while creating target subfolder: {e}"
                     )
                     break
 
             else:
-                print(
-                    f"\033[93mWarning: Skipped {file} as it is not a photo or video file\033[0m"
+                self.logger.warning(
+                    f"Skipped {file} as it is not a supported photo or video file"
                 )
-
-
-if __name__ == "__main__":
-    adder = CameraRollAdder()
-    adder.add_photos_to_master_set()

@@ -1,4 +1,4 @@
-#!/share/CACHEDEV1_DATA/.qpkg/Python3/opt/python3/bin/python3
+#!/share/CACHEDEV1_DATA/.qpkg/Python3/opt/python3/bin/python3.12
 
 import sys
 import json

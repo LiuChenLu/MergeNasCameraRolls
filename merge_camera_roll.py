@@ -115,7 +115,8 @@ class CameraRollAdder:
                     destination_photos_folder / self._get_target_subfolder_name(file)
                 )
                 try:
-                    target_photo = destination_photos_folder / file.name
+                    target_subfolder.mkdir(exist_ok=True)
+                    target_photo = target_subfolder / file.name
                     if not target_photo.exists():
                         target_photo.write_bytes(file.read_bytes())
                         self.logger.debug(f"Copied {file} to {target_photo}")

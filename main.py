@@ -38,7 +38,7 @@ def init_logger(logs_file):
         print(f"Error: Logs file does not exist: {logs_file}", file=sys.stderr)
         sys.exit(1)
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     handler = logging.FileHandler(logs_file)
     formatter = logging.Formatter(
         "%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"

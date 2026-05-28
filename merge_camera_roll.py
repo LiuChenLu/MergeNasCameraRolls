@@ -115,21 +115,26 @@ class CameraRollAdder:
                 target_subfolder = (
                     destination_photos_folder / self._get_target_subfolder_name(file)
                 )
+
                 try:
                     target_subfolder.mkdir(exist_ok=True)
-                    target_photo = target_subfolder / file.name
-                    if not target_photo.exists():
-                        target_photo.write_bytes(file.read_bytes())
-                        self.logger.debug(f"Copied {file} to {target_photo}")
-                    else:
-                        self.logger.debug(
-                            f"Skipped copying {file} as it already exists in {target_photo}"
-                        )
                 except Exception as e:
                     self.logger.error(
                         f"Error occurred while creating target subfolder: {e}"
                     )
                     break
+
+                target_photo = target_subfolder / file.name
+                if not target_photo.exists():
+                    target_photo.write_bytes(file.read_bytes())
+                    self.logger.debug(f"Copied {file} to {target_photo}")
+                else:
+                    self.logger.debug(
+                        f"Skipped copying {file} as it already exists in {target_photo}"
+                    )
+                # delete the original file after copying
+                file.unlink()
+                self.logger.debug(f"Deleted original file {file} after copying")
 
             else:
                 self.logger.warning(

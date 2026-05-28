@@ -20,7 +20,7 @@ class CameraRollAdder:
     def _get_created_time(self, photo) -> Optional[datetime]:
         """Get the created time of the photo"""
 
-        # For mp4 video files, use ffprobe to get the creation time from metadata
+        # For mp4 video files, try to use ffprobe to get the creation time from metadata
         if photo.suffix.lower() in [".mp4"]:
             cmd = [
                 "ffprobe",
@@ -38,22 +38,23 @@ class CameraRollAdder:
 
             fmt = data.get("format", {})
             tags = fmt.get("tags", {})
-            return datetime.fromisoformat(
-                tags.get("creation_time").replace("Z)", "+00:00")
-            )
+            if tags.get("creation_time") is not None:
+                return datetime.fromisoformat(
+                    tags.get("creation_time").replace("Z)", "+00:00")
+                )
 
-        else:  # For other files, use the file system's created time
-            stat = photo.stat()
-            # Windows
-            if sys.platform.startswith("win"):
-                timestamp = stat.st_ctime
-            # macOS
-            elif hasattr(stat, "st_birthtime"):
-                timestamp = stat.st_birthtime
-            # Linux fallback
-            else:
-                timestamp = stat.st_mtime
-            return datetime.fromtimestamp(timestamp)
+        # For other files, use the file system's created time
+        stat = photo.stat()
+        # Windows
+        if sys.platform.startswith("win"):
+            timestamp = stat.st_ctime
+        # macOS
+        elif hasattr(stat, "st_birthtime"):
+            timestamp = stat.st_birthtime
+        # Linux fallback
+        else:
+            timestamp = stat.st_mtime
+        return datetime.fromtimestamp(timestamp)
 
     def _get_target_subfolder_name(self, photo) -> str:
         """Get the target subfolder name based on the created time of the photo"""
@@ -122,7 +123,7 @@ class CameraRollAdder:
                         self.logger.debug(f"Copied {file} to {target_photo}")
                     else:
                         self.logger.debug(
-                            f"Skipped {file} as it already exists in {target_photo}"
+                            f"Skipped copying {file} as it already exists in {target_photo}"
                         )
                 except Exception as e:
                     self.logger.error(
